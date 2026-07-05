@@ -53,9 +53,16 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '9.0.x'
-    - name: Build HyperSploit
+    - name: Build HyperSploit (x64)
       run: dotnet publish HyperSploit.sln -c Release -r osx-x64
+    - name: Build HyperSploit (ARM64)
+      run: dotnet publish HyperSploit.sln -c Release -r osx-arm64
+    - name: Create Universal Binary
+      run: |
+        mkdir -p bin/Release/net9.0/osx-universal/publish
+        lipo -create -output bin/Release/net9.0/osx-universal/publish/HyperSploit bin/Release/net9.0/osx-x64/publish/HyperSploit bin/Release/net9.0/osx-arm64/publish/HyperSploit
+        lipo -info bin/Release/net9.0/osx-universal/publish/HyperSploit
     - uses: actions/upload-artifact@v4
       with:
         name: HyperSploit-MacOS
-        path: bin/Release/net9.0/osx-x64/publish/HyperSploit
+        path: bin/Release/net9.0/osx-universal/publish/HyperSploit
