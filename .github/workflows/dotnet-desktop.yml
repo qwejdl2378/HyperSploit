@@ -54,16 +54,58 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '9.0.x'
-    - name: Build HyperSploit (x64)
-      run: dotnet publish HyperSploit.sln -c Release -r osx-x64
-    - name: Build HyperSploit (ARM64)
+    - name: Build HyperSploit
       run: dotnet publish HyperSploit.sln -c Release -r osx-arm64
-    - name: Create Universal Binary
-      run: |
-        mkdir -p bin/Release/net9.0/osx-universal/publish
-        lipo -create -output bin/Release/net9.0/osx-universal/publish/HyperSploit bin/Release/net9.0/osx-x64/publish/HyperSploit bin/Release/net9.0/osx-arm64/publish/HyperSploit
-        lipo -info bin/Release/net9.0/osx-universal/publish/HyperSploit
     - uses: actions/upload-artifact@v4
       with:
         name: HyperSploit-MacOS
-        path: bin/Release/net9.0/osx-universal/publish/HyperSploit
+        path: bin/Release/net9.0/osx-arm64/publish/HyperSploit
+
+  release:
+    name: Create Release
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Download Windows Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: HyperSploit-Windows.exe
+        path: ./artifacts/windows
+
+    - name: Download Linux Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: HyperSploit-Linux
+        path: ./artifacts/linux
+
+    - name: Download MacOS Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: HyperSploit-MacOS
+        path: ./artifacts/macos
+
+    - name: Prepare Release Files
+      run: |
+        mkdir -p ./release-assets
+        cp ./artifacts/windows/HyperSploit.exe ./release-assets/HyperSploit-Windows.exe
+        cp ./artifacts/linux/HyperSploit ./release-assets/HyperSploit-Linux
+        cp ./artifacts/macos/HyperSploit ./release-assets/HyperSploit-MacOS
+        chmod +x ./release-assets/HyperSploit-Linux
+        chmod +x ./release-assets/HyperSploit-MacOS
+
+    - name: Upload to Release
+      uses: marvinpinto/action-automatic-releases@latest
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: true
+        title: "Latest Development Build"
+        files: |
+          ./release-assets/HyperSploit-Windows.exe
+          ./release-assets/HyperSploit-Linux
+          ./release-assets/HyperSploit-MacOS
